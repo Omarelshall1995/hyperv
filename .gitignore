@@ -5,3 +5,5 @@ terraform.tfstate.*
 *.cer
 *.zip
 *.iso
+terraform.tfvars
+

@@ -8,9 +8,10 @@ terraform {
 }
 
 provider "hyperv" {
-  user     = "LOQ"
-  password = "Qwaszx12_"
+  user     = var.hyperv_user
+  password = var.hyperv_password
 }
+
 
 resource "hyperv_machine_instance" "node01" {
   name                   = "node01"
