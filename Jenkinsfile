@@ -4,7 +4,7 @@ pipeline {
   environment {
     NODE2 = '172.19.124.223'
     NODE3 = '172.19.124.224'
-    SSH_USER = 'administrator'
+    SSH_USER = 'lab\administrator'
     SSH_PASS = credentials('lab-administrator-password')  // Store password in Jenkins credentials with this id
   }
 
