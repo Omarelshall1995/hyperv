@@ -11,7 +11,7 @@ pipeline {
   stages {
     stage('Clone Repo') {
       steps {
-        git url: 'https://github.com/Omarelshall1995/hyperv.git'
+        git branch: 'main', url: 'https://github.com/Omarelshall1995/hyperv.git'
       }
     }
 
