@@ -19,7 +19,7 @@ pipeline {
       steps {
         dir('C:/hyperv-sql-cluster') {
           powershell 'terraform init'
-          powershell 'terraform apply -auto-approve'
+          
         }
       }
     }
