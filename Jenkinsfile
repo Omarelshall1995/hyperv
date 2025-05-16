@@ -4,8 +4,7 @@ pipeline {
   environment {
     NODE2 = '172.19.124.223'
     NODE3 = '172.19.124.224'
-    SSH_USER = 'lab\\administrator'
-    SSH_PASS = credentials('lab-administrator-password')
+    SSH_USER = 'lab\\administrator'  // Windows style user, adjust if needed
   }
 
   stages {
@@ -15,11 +14,10 @@ pipeline {
       }
     }
 
-    stage('Terraform Init & Apply') {
+    stage('Terraform Init') {
       steps {
         dir('C:/hyperv-sql-cluster') {
           powershell 'terraform init'
-          
         }
       }
     }
@@ -27,7 +25,7 @@ pipeline {
     stage('Copy Scripts to Node2') {
       steps {
         powershell """
-          sshpass -p ${env.SSH_PASS} scp -o StrictHostKeyChecking=no -r sql-install ${env.SSH_USER}@${env.NODE2}:C:\\Users\\Administrator\\
+          scp -o StrictHostKeyChecking=no -r sql-install ${env.SSH_USER}@${env.NODE2}:C:\\Users\\Administrator\\
         """
       }
     }
@@ -35,7 +33,7 @@ pipeline {
     stage('Copy Scripts to Node3') {
       steps {
         powershell """
-          sshpass -p ${env.SSH_PASS} scp -o StrictHostKeyChecking=no -r sql-install ${env.SSH_USER}@${env.NODE3}:C:\\Users\\Administrator\\
+          scp -o StrictHostKeyChecking=no -r sql-install ${env.SSH_USER}@${env.NODE3}:C:\\Users\\Administrator\\
         """
       }
     }
@@ -43,7 +41,7 @@ pipeline {
     stage('Run SQL FCI Install on Node3') {
       steps {
         powershell """
-          sshpass -p ${env.SSH_PASS} ssh -o StrictHostKeyChecking=no ${env.SSH_USER}@${env.NODE3} powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\install_fci.ps1
+          ssh -o StrictHostKeyChecking=no ${env.SSH_USER}@${env.NODE3} powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\install_fci.ps1
         """
       }
     }
@@ -51,7 +49,7 @@ pipeline {
     stage('Add Node to Cluster on Node2') {
       steps {
         powershell """
-          sshpass -p ${env.SSH_PASS} ssh -o StrictHostKeyChecking=no ${env.SSH_USER}@${env.NODE2} powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\add_node.ps1
+          ssh -o StrictHostKeyChecking=no ${env.SSH_USER}@${env.NODE2} powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\add_node.ps1
         """
       }
     }
