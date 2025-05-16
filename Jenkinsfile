@@ -5,14 +5,13 @@ pipeline {
     NODE2 = '172.19.124.223'
     NODE3 = '172.19.124.224'
     SSH_USER = 'Administrator'
-    SSH_PASS = credentials('local-admin-password')  // Jenkins credential ID for Qwaszx12_
-    REPO_URL = 'https://github.com/Omarelshall1995/hyperv.git'
+    SSH_PASS = credentials('local-admin-password')  // your password stored in Jenkins creds
   }
 
   stages {
     stage('Clone Repo') {
       steps {
-        git branch: 'main', url: "${REPO_URL}"
+        git branch: 'main', url: 'https://github.com/Omarelshall1995/hyperv.git'
       }
     }
 
@@ -24,25 +23,25 @@ pipeline {
       }
     }
 
-    stage('Copy Scripts to Node2') {
+    stage('Copy Scripts to Nodes') {
       steps {
         powershell """
-          \$password = '${SSH_PASS}'
-          \$user = '${SSH_USER}'
-          \$node = '${NODE2}'
-          # Native scp command, assuming scp is available in PATH
-          scp -r sql-install \$user@\$node:C:\\Users\\Administrator\\sql-install
-        """
-      }
-    }
+          \$password = ConvertTo-SecureString '${SSH_PASS}' -AsPlainText -Force
+          \$cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', \$password)
 
-    stage('Copy Scripts to Node3') {
-      steps {
-        powershell """
-          \$password = '${SSH_PASS}'
-          \$user = '${SSH_USER}'
-          \$node = '${NODE3}'
-          scp -r sql-install \$user@\$node:C:\\Users\\Administrator\\sql-install
+          # Copy sql-install to Node2
+          Invoke-Command -ComputerName ${NODE2} -Credential \$cred -ScriptBlock {
+            param(\$source)
+            if (-Not (Test-Path -Path \$source)) { New-Item -ItemType Directory -Path \$source -Force }
+            Copy-Item -Path 'C:\\jenkins\\workspace\\pipeline script from scm\\sql-install\\*' -Destination \$source -Recurse -Force
+          } -ArgumentList 'C:\\Users\\Administrator\\sql-install'
+
+          # Copy sql-install to Node3
+          Invoke-Command -ComputerName ${NODE3} -Credential \$cred -ScriptBlock {
+            param(\$source)
+            if (-Not (Test-Path -Path \$source)) { New-Item -ItemType Directory -Path \$source -Force }
+            Copy-Item -Path 'C:\\jenkins\\workspace\\pipeline script from scm\\sql-install\\*' -Destination \$source -Recurse -Force
+          } -ArgumentList 'C:\\Users\\Administrator\\sql-install'
         """
       }
     }
@@ -50,10 +49,11 @@ pipeline {
     stage('Run SQL FCI Install on Node3') {
       steps {
         powershell """
-          \$password = '${SSH_PASS}'
-          \$user = '${SSH_USER}'
-          \$node = '${NODE3}'
-          ssh \$user@\$node powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\install_fci.ps1
+          \$password = ConvertTo-SecureString '${SSH_PASS}' -AsPlainText -Force
+          \$cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', \$password)
+          Invoke-Command -ComputerName ${NODE3} -Credential \$cred -ScriptBlock {
+            powershell.exe -ExecutionPolicy Bypass -File 'C:\\Users\\Administrator\\sql-install\\install_fci.ps1'
+          }
         """
       }
     }
@@ -61,10 +61,11 @@ pipeline {
     stage('Add Node to Cluster on Node2') {
       steps {
         powershell """
-          \$password = '${SSH_PASS}'
-          \$user = '${SSH_USER}'
-          \$node = '${NODE2}'
-          ssh \$user@\$node powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\add_node.ps1
+          \$password = ConvertTo-SecureString '${SSH_PASS}' -AsPlainText -Force
+          \$cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', \$password)
+          Invoke-Command -ComputerName ${NODE2} -Credential \$cred -ScriptBlock {
+            powershell.exe -ExecutionPolicy Bypass -File 'C:\\Users\\Administrator\\sql-install\\add_node.ps1'
+          }
         """
       }
     }
