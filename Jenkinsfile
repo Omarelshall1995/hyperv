@@ -4,7 +4,8 @@ pipeline {
   environment {
     NODE2 = '172.19.124.223'
     NODE3 = '172.19.124.224'
-    SSH_USER = 'lab\\administrator'  // Windows style user, adjust if needed
+    SSH_USER = 'Administrator'
+    SSH_PASS = credentials('local-admin-password')  // Use your Jenkins credential ID for Qwaszx12_
   }
 
   stages {
@@ -25,7 +26,11 @@ pipeline {
     stage('Copy Scripts to Node2') {
       steps {
         powershell """
-          scp -o StrictHostKeyChecking=no -r sql-install ${env.SSH_USER}@${env.NODE2}:C:\\Users\\Administrator\\
+          $password = ConvertTo-SecureString '${SSH_PASS}' -AsPlainText -Force
+          $cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', $password)
+          New-SFTPSession -ComputerName ${NODE2} -Credential $cred
+          Set-SFTPFile -SessionId 0 -LocalFile 'sql-install\\*' -RemotePath 'C:\\Users\\Administrator\\sql-install' -Recurse
+          Remove-SFTPSession -SessionId 0
         """
       }
     }
@@ -33,7 +38,11 @@ pipeline {
     stage('Copy Scripts to Node3') {
       steps {
         powershell """
-          scp -o StrictHostKeyChecking=no -r sql-install ${env.SSH_USER}@${env.NODE3}:C:\\Users\\Administrator\\
+          $password = ConvertTo-SecureString '${SSH_PASS}' -AsPlainText -Force
+          $cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', $password)
+          New-SFTPSession -ComputerName ${NODE3} -Credential $cred
+          Set-SFTPFile -SessionId 0 -LocalFile 'sql-install\\*' -RemotePath 'C:\\Users\\Administrator\\sql-install' -Recurse
+          Remove-SFTPSession -SessionId 0
         """
       }
     }
@@ -41,7 +50,11 @@ pipeline {
     stage('Run SQL FCI Install on Node3') {
       steps {
         powershell """
-          ssh -o StrictHostKeyChecking=no ${env.SSH_USER}@${env.NODE3} powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\install_fci.ps1
+          $password = ConvertTo-SecureString '${SSH_PASS}' -AsPlainText -Force
+          $cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', $password)
+          $session = New-SSHSession -ComputerName ${NODE3} -Credential $cred
+          Invoke-SSHCommand -SessionId $session.SessionId -Command 'powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\install_fci.ps1'
+          Remove-SSHSession -SessionId $session.SessionId
         """
       }
     }
@@ -49,7 +62,11 @@ pipeline {
     stage('Add Node to Cluster on Node2') {
       steps {
         powershell """
-          ssh -o StrictHostKeyChecking=no ${env.SSH_USER}@${env.NODE2} powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\add_node.ps1
+          $password = ConvertTo-SecureString '${SSH_PASS}' -AsPlainText -Force
+          $cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', $password)
+          $session = New-SSHSession -ComputerName ${NODE2} -Credential $cred
+          Invoke-SSHCommand -SessionId $session.SessionId -Command 'powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\add_node.ps1'
+          Remove-SSHSession -SessionId $session.SessionId
         """
       }
     }
