@@ -5,13 +5,14 @@ pipeline {
     NODE2 = '172.19.124.223'
     NODE3 = '172.19.124.224'
     SSH_USER = 'Administrator'
-    SSH_PASS = credentials('local-admin-password') // Jenkins credential ID for password
+    SSH_PASS = credentials('local-admin-password')  // Jenkins credential ID for Qwaszx12_
+    REPO_URL = 'https://github.com/Omarelshall1995/hyperv.git'
   }
 
   stages {
     stage('Clone Repo') {
       steps {
-        git branch: 'main', url: 'https://github.com/Omarelshall1995/hyperv.git'
+        git branch: 'main', url: "${REPO_URL}"
       }
     }
 
@@ -26,12 +27,11 @@ pipeline {
     stage('Copy Scripts to Node2') {
       steps {
         powershell """
-          Import-Module Posh-SSH
-          \$password = ConvertTo-SecureString '${SSH_PASS}' -AsPlainText -Force
-          \$cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', \$password)
-          \$session = New-SFTPSession -ComputerName ${NODE2} -Credential \$cred
-          Set-SFTPFile -SessionId \$session.SessionId -LocalFile 'sql-install\\*' -RemotePath 'C:\\Users\\Administrator\\sql-install' -Recurse -Force
-          Remove-SFTPSession -SessionId \$session.SessionId
+          \$password = '${SSH_PASS}'
+          \$user = '${SSH_USER}'
+          \$node = '${NODE2}'
+          # Native scp command, assuming scp is available in PATH
+          scp -r sql-install \$user@\$node:C:\\Users\\Administrator\\sql-install
         """
       }
     }
@@ -39,12 +39,10 @@ pipeline {
     stage('Copy Scripts to Node3') {
       steps {
         powershell """
-          Import-Module Posh-SSH
-          \$password = ConvertTo-SecureString '${SSH_PASS}' -AsPlainText -Force
-          \$cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', \$password)
-          \$session = New-SFTPSession -ComputerName ${NODE3} -Credential \$cred
-          Set-SFTPFile -SessionId \$session.SessionId -LocalFile 'sql-install\\*' -RemotePath 'C:\\Users\\Administrator\\sql-install' -Recurse -Force
-          Remove-SFTPSession -SessionId \$session.SessionId
+          \$password = '${SSH_PASS}'
+          \$user = '${SSH_USER}'
+          \$node = '${NODE3}'
+          scp -r sql-install \$user@\$node:C:\\Users\\Administrator\\sql-install
         """
       }
     }
@@ -52,12 +50,10 @@ pipeline {
     stage('Run SQL FCI Install on Node3') {
       steps {
         powershell """
-          Import-Module Posh-SSH
-          \$password = ConvertTo-SecureString '${SSH_PASS}' -AsPlainText -Force
-          \$cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', \$password)
-          \$session = New-SSHSession -ComputerName ${NODE3} -Credential \$cred
-          Invoke-SSHCommand -SessionId \$session.SessionId -Command 'powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\install_fci.ps1'
-          Remove-SSHSession -SessionId \$session.SessionId
+          \$password = '${SSH_PASS}'
+          \$user = '${SSH_USER}'
+          \$node = '${NODE3}'
+          ssh \$user@\$node powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\install_fci.ps1
         """
       }
     }
@@ -65,12 +61,10 @@ pipeline {
     stage('Add Node to Cluster on Node2') {
       steps {
         powershell """
-          Import-Module Posh-SSH
-          \$password = ConvertTo-SecureString '${SSH_PASS}' -AsPlainText -Force
-          \$cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', \$password)
-          \$session = New-SSHSession -ComputerName ${NODE2} -Credential \$cred
-          Invoke-SSHCommand -SessionId \$session.SessionId -Command 'powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\add_node.ps1'
-          Remove-SSHSession -SessionId \$session.SessionId
+          \$password = '${SSH_PASS}'
+          \$user = '${SSH_USER}'
+          \$node = '${NODE2}'
+          ssh \$user@\$node powershell.exe -ExecutionPolicy Bypass -File C:\\Users\\Administrator\\sql-install\\add_node.ps1
         """
       }
     }
