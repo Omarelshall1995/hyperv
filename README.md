@@ -85,7 +85,7 @@ Start-Process -FilePath "C:\SQL2022\setup\setup.exe" -ArgumentList "/Configurati
 
 ---
 
-## 🧪 Validation
+##  Validation
 
 * SQL Server Role in Failover Cluster Manager
 * Shared storage active
@@ -93,7 +93,7 @@ Start-Process -FilePath "C:\SQL2022\setup\setup.exe" -ArgumentList "/Configurati
 
 ---
 
-## 🚀 CI/CD Pipeline
+##  CI/CD Pipeline
 
 The Jenkins pipeline performs the following:
 
@@ -106,25 +106,10 @@ Ensure `plink.exe` and `pscp.exe` are in `C:\Windows\System32`.
 
 ---
 
-## 🗂️ File Structure
-
-```
-├── Jenkinsfile
-├── sql-install
-│   ├── add_node.ps1
-│   ├── install_fci.ps1
-│   ├── SQLAddNode.ini
-│   └── SQLFCI.ini
-├── images
-│   ├── cluster-nodes.png
-│   ├── iscsi-node01-connected.png
-│   └── ...
-└── README.md
-```
 
 ---
 
-## ✅ Summary
+##  Summary
 
 You’ve set up a fully functional SQL Server Failover Cluster with:
 
@@ -135,4 +120,4 @@ You’ve set up a fully functional SQL Server Failover Cluster with:
 
 ---
 
-Let me know if you want a PDF version or a version with embedded Jenkins pipeline screenshots.
+
