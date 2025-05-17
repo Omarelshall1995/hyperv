@@ -4,6 +4,8 @@ pipeline {
   environment {
     NODE2_IP = '172.19.124.223'
     NODE3_IP = '172.19.124.224'
+    SSH_USER = 'administrator'
+    SSH_PASS = credentials('ssh-password-id') // your Jenkins secret text ID
   }
 
   stages {
@@ -15,49 +17,33 @@ pipeline {
 
     stage('Copy Scripts to Node2') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'ssh-password-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-          powershell """
-            \$secpasswd = ConvertTo-SecureString '${PASSWORD}' -AsPlainText -Force
-            \$cred = New-Object System.Management.Automation.PSCredential('${USERNAME}', \$secpasswd)
-            Copy-Item -Path "\${WORKSPACE}\\sql-install\\*" -Destination "C:\\Scripts\\" -Recurse -ToSession (New-PSSession -ComputerName ${NODE2_IP} -Credential \$cred)
-          """
-        }
+        bat """
+        echo y | pscp -pw %SSH_PASS% sql-install\\* %SSH_USER%@%NODE2_IP%:C:\\Scripts\\
+        """
       }
     }
 
     stage('Copy Scripts to Node3') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'ssh-password-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-          powershell """
-            \$secpasswd = ConvertTo-SecureString '${PASSWORD}' -AsPlainText -Force
-            \$cred = New-Object System.Management.Automation.PSCredential('${USERNAME}', \$secpasswd)
-            Copy-Item -Path "\${WORKSPACE}\\sql-install\\*" -Destination "C:\\Scripts\\" -Recurse -ToSession (New-PSSession -ComputerName ${NODE3_IP} -Credential \$cred)
-          """
-        }
+        bat """
+        echo y | pscp -pw %SSH_PASS% sql-install\\* %SSH_USER%@%NODE3_IP%:C:\\Scripts\\
+        """
       }
     }
 
     stage('Run SQL FCI Install on Node3') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'ssh-password-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-          powershell """
-            \$secpasswd = ConvertTo-SecureString '${PASSWORD}' -AsPlainText -Force
-            \$cred = New-Object System.Management.Automation.PSCredential('${USERNAME}', \$secpasswd)
-            Invoke-Command -ComputerName ${NODE3_IP} -Credential \$cred -ScriptBlock { C:\\Scripts\\install_fci.ps1 }
-          """
-        }
+        bat """
+        echo y | plink -pw %SSH_PASS% %SSH_USER%@%NODE3_IP% powershell -ExecutionPolicy Bypass -File C:\\Scripts\\install_fci.ps1
+        """
       }
     }
 
     stage('Add Node to Cluster on Node2') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'ssh-password-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-          powershell """
-            \$secpasswd = ConvertTo-SecureString '${PASSWORD}' -AsPlainText -Force
-            \$cred = New-Object System.Management.Automation.PSCredential('${USERNAME}', \$secpasswd)
-            Invoke-Command -ComputerName ${NODE2_IP} -Credential \$cred -ScriptBlock { C:\\Scripts\\add_node.ps1 }
-          """
-        }
+        bat """
+        echo y | plink -pw %SSH_PASS% %SSH_USER%@%NODE2_IP% powershell -ExecutionPolicy Bypass -File C:\\Scripts\\add_node.ps1
+        """
       }
     }
   }
