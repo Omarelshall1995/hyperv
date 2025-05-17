@@ -1,64 +1,61 @@
 pipeline {
   agent any
+
   environment {
     NODE2_IP = '172.19.124.223'
     NODE3_IP = '172.19.124.224'
-    SSH_USER = 'Administrator'
   }
+
   stages {
     stage('Checkout') {
       steps {
         git url: 'https://github.com/Omarelshall1995/hyperv.git', branch: 'main'
       }
     }
+
     stage('Copy Scripts to Node2') {
       steps {
-        withCredentials([string(credentialsId: 'ssh-password-id', variable: 'SSH_PASS')]) {
+        withCredentials([usernamePassword(credentialsId: 'ssh-password-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
           powershell """
-            \$secpasswd = ConvertTo-SecureString \$env:SSH_PASS -AsPlainText -Force
-            \$cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', \$secpasswd)
-            \$session = New-PSSession -ComputerName ${NODE2_IP} -Credential \$cred -Authentication Basic
-            Copy-Item -Path './scripts/*' -Destination 'C:\\Scripts\\' -ToSession \$session -Recurse -Force
-            Remove-PSSession \$session
+            \$secpasswd = ConvertTo-SecureString '${PASSWORD}' -AsPlainText -Force
+            \$cred = New-Object System.Management.Automation.PSCredential('${USERNAME}', \$secpasswd)
+            Copy-Item -Path "\${WORKSPACE}\\sql-install\\*" -Destination "C:\\Scripts\\" -Recurse -ToSession (New-PSSession -ComputerName ${NODE2_IP} -Credential \$cred)
           """
         }
       }
     }
+
     stage('Copy Scripts to Node3') {
       steps {
-        withCredentials([string(credentialsId: 'ssh-password-id', variable: 'SSH_PASS')]) {
+        withCredentials([usernamePassword(credentialsId: 'ssh-password-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
           powershell """
-            \$secpasswd = ConvertTo-SecureString \$env:SSH_PASS -AsPlainText -Force
-            \$cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', \$secpasswd)
-            \$session = New-PSSession -ComputerName ${NODE3_IP} -Credential \$cred -Authentication Basic
-            Copy-Item -Path './scripts/*' -Destination 'C:\\Scripts\\' -ToSession \$session -Recurse -Force
-            Remove-PSSession \$session
+            \$secpasswd = ConvertTo-SecureString '${PASSWORD}' -AsPlainText -Force
+            \$cred = New-Object System.Management.Automation.PSCredential('${USERNAME}', \$secpasswd)
+            Copy-Item -Path "\${WORKSPACE}\\sql-install\\*" -Destination "C:\\Scripts\\" -Recurse -ToSession (New-PSSession -ComputerName ${NODE3_IP} -Credential \$cred)
           """
         }
       }
     }
+
     stage('Run SQL FCI Install on Node3') {
       steps {
-        withCredentials([string(credentialsId: 'ssh-password-id', variable: 'SSH_PASS')]) {
+        withCredentials([usernamePassword(credentialsId: 'ssh-password-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
           powershell """
-            \$secpasswd = ConvertTo-SecureString \$env:SSH_PASS -AsPlainText -Force
-            \$cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', \$secpasswd)
-            Invoke-Command -ComputerName ${NODE3_IP} -Credential \$cred -Authentication Basic -ScriptBlock {
-              & 'C:\\Scripts\\install-sql-fci.ps1'
-            }
+            \$secpasswd = ConvertTo-SecureString '${PASSWORD}' -AsPlainText -Force
+            \$cred = New-Object System.Management.Automation.PSCredential('${USERNAME}', \$secpasswd)
+            Invoke-Command -ComputerName ${NODE3_IP} -Credential \$cred -ScriptBlock { C:\\Scripts\\install_fci.ps1 }
           """
         }
       }
     }
+
     stage('Add Node to Cluster on Node2') {
       steps {
-        withCredentials([string(credentialsId: 'ssh-password-id', variable: 'SSH_PASS')]) {
+        withCredentials([usernamePassword(credentialsId: 'ssh-password-id', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
           powershell """
-            \$secpasswd = ConvertTo-SecureString \$env:SSH_PASS -AsPlainText -Force
-            \$cred = New-Object System.Management.Automation.PSCredential ('${SSH_USER}', \$secpasswd)
-            Invoke-Command -ComputerName ${NODE2_IP} -Credential \$cred -Authentication Basic -ScriptBlock {
-              & 'C:\\Scripts\\add-node.ps1'
-            }
+            \$secpasswd = ConvertTo-SecureString '${PASSWORD}' -AsPlainText -Force
+            \$cred = New-Object System.Management.Automation.PSCredential('${USERNAME}', \$secpasswd)
+            Invoke-Command -ComputerName ${NODE2_IP} -Credential \$cred -ScriptBlock { C:\\Scripts\\add_node.ps1 }
           """
         }
       }
