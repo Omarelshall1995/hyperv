@@ -5,7 +5,7 @@ pipeline {
     NODE2_IP = '172.19.124.223'
     NODE3_IP = '172.19.124.224'
     SSH_USER = 'administrator'
-    SSH_PASS = credentials('ssh-password-id') // your Jenkins secret text ID
+    SSH_PASS = credentials('ssh-password-id')  // Make sure this is secret text
   }
 
   stages {
@@ -18,7 +18,7 @@ pipeline {
     stage('Copy Scripts to Node2') {
       steps {
         bat """
-        echo y | pscp -pw %SSH_PASS% sql-install\\* %SSH_USER%@%NODE2_IP%:C:\\Scripts\\
+        pscp.exe -pw %SSH_PASS% sql-install\\* %SSH_USER%@%NODE2_IP%:C:\\Scripts\\
         """
       }
     }
@@ -26,7 +26,7 @@ pipeline {
     stage('Copy Scripts to Node3') {
       steps {
         bat """
-        echo y | pscp -pw %SSH_PASS% sql-install\\* %SSH_USER%@%NODE3_IP%:C:\\Scripts\\
+        pscp.exe -pw %SSH_PASS% sql-install\\* %SSH_USER%@%NODE3_IP%:C:\\Scripts\\
         """
       }
     }
@@ -34,7 +34,7 @@ pipeline {
     stage('Run SQL FCI Install on Node3') {
       steps {
         bat """
-        echo y | plink -pw %SSH_PASS% %SSH_USER%@%NODE3_IP% powershell -ExecutionPolicy Bypass -File C:\\Scripts\\install_fci.ps1
+        plink.exe -pw %SSH_PASS% %SSH_USER%@%NODE3_IP% powershell -ExecutionPolicy Bypass -File C:\\Scripts\\install_fci.ps1
         """
       }
     }
@@ -42,7 +42,7 @@ pipeline {
     stage('Add Node to Cluster on Node2') {
       steps {
         bat """
-        echo y | plink -pw %SSH_PASS% %SSH_USER%@%NODE2_IP% powershell -ExecutionPolicy Bypass -File C:\\Scripts\\add_node.ps1
+        plink.exe -pw %SSH_PASS% %SSH_USER%@%NODE2_IP% powershell -ExecutionPolicy Bypass -File C:\\Scripts\\add_node.ps1
         """
       }
     }
