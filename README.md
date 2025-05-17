@@ -1,150 +1,125 @@
-# High Availability SQL Server Failover Cluster Setup
+# SQL Server 2022 Failover Cluster Instance (FCI) Setup using Hyper-V, PowerShell, Terraform, and Jenkins
 
-This project automates the deployment of a highly available SQL Server Failover Cluster Instance (FCI) on Windows Server VMs using Hyper-V and shared iSCSI storage.
+## Overview
 
----
+This project demonstrates the automated setup of a highly available SQL Server 2022 Failover Cluster Instance using two Windows Server nodes provisioned via Terraform and running on Hyper-V. The solution includes:
 
-## Architecture Overview
+* Active Directory and DNS configuration
+* iSCSI shared storage setup
+* Failover Clustering configuration
+* SQL Server 2022 FCI installation
+* Jenkins CI/CD pipeline to execute remote scripts using Plink (SSH)
 
-* **Domain Controller:** Active Directory setup to manage authentication.
-* **Node1 & Node2:** Windows Server 2022 VMs participating in the failover cluster.
-* **Shared Storage:** iSCSI target attached to both nodes.
-* **SQL Server 2022:** Installed as a Failover Cluster Instance.
+## Infrastructure Components
 
----
-
-## Key Features
-
-* Automated provisioning using Terraform
-* SQL Server setup via PowerShell and Jenkins
-* Shared storage mounted as `Cluster Disk 1`
-* Failover Cluster configured and validated
+* **Node1 (DC01):** Domain Controller, DNS
+* **Node2 & Node3:** SQL FCI cluster nodes
+* **Hyper-V Host:** Running all VMs
+* **Shared Disk:** Configured with iSCSI
 
 ---
 
-## Prerequisites
+## Step-by-Step Setup
 
-### On Hyper-V Host
+### 1. Prepare Hyper-V Environment
 
-* Enabled Hyper-V feature
-* Shared VHDX or iSCSI Target setup for shared disk
+* Installed Hyper-V on the host machine
+* Used Terraform to provision VMs:
 
-### On Each Node
+  * Domain Controller (Node1)
+  * Node2 (SQL FCI Primary)
+  * Node3 (SQL FCI Secondary)
 
-* Windows Server 2022
-* Roles:
+### 2. Active Directory Setup
 
-  * Failover Clustering
-  * File Server
-  * iSCSI Initiator
-* Features:
+* Promoted Node1 to Domain Controller (`lab.local`)
+* Added Node2 and Node3 to the domain
 
-  * .NET Framework 4.7+
+### 3. iSCSI Target Configuration
 
----
+* Created virtual disk `iscsi-server.vhdx`
+* Configured iSCSI target on host and allowed Node2 & Node3 as initiators
 
-## Setup Instructions
+**Screenshot Reference:**
 
-### 1. Create Domain Controller
+* `iscsi-node01-connected.png`
+* `iscsi-node02-connected.png`
 
-* Promote `node01` to Domain Controller: `lab.local`
-* Set static IP and enable DNS
+### 4. Failover Cluster Installation
 
-### 2. Create and Join Cluster Nodes
+* Installed Failover Clustering role on Node2 & Node3
+* Validated cluster using wizard
 
-* Provision `node2` and `node3`
-* Join both to `lab.local`
+**Screenshot Reference:**
 
-### 3. Configure iSCSI Target
+* `fci-validation-results.png`
+* `add-cluster.png`
+* `cluster-nodes.png`
+* `cluster-summary.png`
 
-* Setup shared disk and connect from both nodes
-* Initialize and format as NTFS
+### 5. Shared Disk Setup
 
-### 4. Enable Windows Roles
+* Initialized the shared disk in Disk Management (Node01)
+* Added disk to cluster via Failover Cluster Manager
 
-```
-Install-WindowsFeature Failover-Clustering -IncludeManagementTools
-Install-WindowsFeature FS-iSCSITarget-Server
-```
+**Screenshot Reference:**
 
----
+* `disk-manaement-node01.png`
+* `Clusterdisk ON NODE01 ONLY.png`
+* `Add clusterdisk ON FAILOVERCLUSTER.png`
 
-## Jenkins Pipeline
+### 6. Skip AD Checks (If any domain/validation warnings)
 
-Used `Plink.exe` and `pscp.exe` (Putty tools) to automate SSH-based remote execution.
+**Screenshot Reference:**
 
-### Steps:
+* `skip-ad-validation.png`
 
-1. Checkout from GitHub
-2. Skip file copy if already manually placed
-3. Execute `install_fci.ps1` on Node3
-4. Add Node2 to cluster with `add_node.ps1`
+### 7. SQL Server 2022 Installation - Node1
 
----
-
-## PowerShell Scripts
-
-### `install_fci.ps1`
-
-Installs SQL Server 2022 FCI on Node3.
+* Mounted SQL ISO: `SQLServer2022-x64-ENU-Dev.iso`
+* Launched setup using a PowerShell script:
 
 ```powershell
-$setupPath = "E:\setup.exe"
-$configFile = "C:\Scripts\SQLFCI.ini"
-Start-Process -FilePath $setupPath -ArgumentList "/ConfigurationFile=$configFile" -Wait
+Start-Process -FilePath "C:\SQL2022\setup\setup.exe" -ArgumentList "/ConfigurationFile=C:\Scripts\SQLFCI.ini" -Wait
 ```
 
-### `add_node.ps1`
+**Screenshot Reference:**
 
-Adds Node2 to the cluster setup.
+* `sql-fci-install-node01.png`
+* `sql fci node01.png`
+* `installin fci.png`
 
-```powershell
-$setupPath = "E:\setup.exe"
-$configFile = "C:\Scripts\SQLAddNode.ini"
-Start-Process -FilePath $setupPath -ArgumentList "/ConfigurationFile=$configFile" -Wait
+### 8. Jenkins Pipeline
+
+* Jenkins runs on a Windows VM
+* We used Plink (`plink.exe`) for SSH remote execution and `pscp.exe` for file transfer (but this was later skipped in favor of manual copy)
+* Jenkinsfile uses `bat` steps to invoke PowerShell over SSH:
+
+```groovy
+bat "plink.exe -pw %SSH_PASS% administrator@NODE3_IP powershell -ExecutionPolicy Bypass -File C:\Scripts\install_fci.ps1"
 ```
 
----
+**Jenkins Stages:**
 
-## Screenshots
-
-(To be inserted below)
-
-1. **Cluster Summary View** – Shows cluster name, nodes, networks
-   `cluster-summary.png`
-
-2. **Nodes Status** – Both nodes `UP` and in the cluster
-   `cluster-nodes.png`
-
-3. **Add Shared Disk** – Adding iSCSI shared disk to the cluster
-   `add-cluster.png`
-
-4. **Disk Management** – Confirming Cluster Disk is online
-   `disk-management-node01.png`
-
-5. **iSCSI Connected (Node1 & Node2)** – Verified iSCSI targets are connected
-   `iscsi-node01-connected.png`, `iscsi-node02-connected.png`
-
-6. **SQL Cluster Validation Passed** – All checks passed, one warning for MSCS
-   `fci-validation-results.png`
-
-7. **Skip AD Check** – Used SkipRules to bypass AD domain controller rule
-   `skip-ad-validation.png`
-
-8. **SQL FCI Setup** – Installation executed via `setup.exe` with config file
-   `sql-fci-install-node01.png`
+* Run SQL install script on Node3
+* Add Node2 to SQL cluster using `add_node.ps1`
 
 ---
 
-## Notes
+## Remaining Screenshots You Uploaded:
 
-* Pipeline execution issues were bypassed by copying files manually to C:\Scripts on the nodes
-* SSH used instead of WinRM for simplicity
-* AD was needed for DNS and Failover Cluster support
+* `2 Nodes no issues noerrors.png` → Cluster healthy status
+* `2 nODES up and running till now.png` → Confirmation of active nodes
+* `node2 connected.png` / `nod1 Asci connected.png` → iSCSI confirmation
+
+We will embed these with captions and appropriate stages if you confirm final names and ordering.
 
 ---
 
-## Credits
+## Final Note
 
-Omar Elshall
-GitHub: [Omarelshall1995](https://github.com/Omarelshall1995)
+* Ensure all scripts are copied to `C:\Scripts` on each node
+* Verify SQL shared disk is online and owned by Node1 before starting installation
+* Use Jenkins only to run scripts (no file copying now)
+
+Let me know when you’re ready to embed Jenkins stage screenshots or if anything should be renamed/added.
