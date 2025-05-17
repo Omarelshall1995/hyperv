@@ -48,7 +48,7 @@ This project automates the deployment of a highly available SQL Server Failover 
 
 ---
 
-## 🏗️ Failover Cluster Setup
+##  Failover Cluster Setup
 
 1. Install the **Failover Clustering** feature.
 2. Run the **Cluster Validation Wizard**.
