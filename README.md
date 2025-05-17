@@ -20,7 +20,7 @@ This project automates the deployment of a highly available SQL Server Failover 
 
 ---
 
-## 🌐 Network & Domain Setup
+##  Network & Domain Setup
 
 1. Create a **virtual switch** in Hyper-V for private network communication.
 2. Provision three VMs:
@@ -35,7 +35,7 @@ This project automates the deployment of a highly available SQL Server Failover 
 
 ---
 
-## 🧱 iSCSI Shared Storage Setup
+##  iSCSI Shared Storage Setup
 
 1. Use `iscsicpl.exe` to configure iSCSI Initiator on both nodes.
 2. Connect to the target exposed from the host using Microsoft iSCSI Target.
