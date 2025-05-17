@@ -11,7 +11,7 @@ This project automates the deployment of a highly available SQL Server Failover 
 
 ---
 
-## 🔧 Prerequisites
+##  Prerequisites
 
 * Windows Server with Hyper-V role enabled
 * Jenkins installed (with Git and Pipeline plugins)
@@ -64,7 +64,7 @@ This project automates the deployment of a highly available SQL Server Failover 
 
 ---
 
-## ⚙️ SQL Server FCI Installation
+##  SQL Server FCI Installation
 
 1. Mount SQL Server ISO to each node.
 2. Prepare configuration file `SQLFCI.ini`.
