@@ -1,125 +1,138 @@
-# SQL Server 2022 Failover Cluster Instance (FCI) Setup using Hyper-V, PowerShell, Terraform, and Jenkins
+# Hyper-V SQL Server Failover Cluster Setup with CI/CD
 
-## Overview
+This project automates the deployment of a highly available SQL Server Failover Cluster Instance (FCI) using:
 
-This project demonstrates the automated setup of a highly available SQL Server 2022 Failover Cluster Instance using two Windows Server nodes provisioned via Terraform and running on Hyper-V. The solution includes:
-
-* Active Directory and DNS configuration
-* iSCSI shared storage setup
-* Failover Clustering configuration
-* SQL Server 2022 FCI installation
-* Jenkins CI/CD pipeline to execute remote scripts using Plink (SSH)
-
-## Infrastructure Components
-
-* **Node1 (DC01):** Domain Controller, DNS
-* **Node2 & Node3:** SQL FCI cluster nodes
-* **Hyper-V Host:** Running all VMs
-* **Shared Disk:** Configured with iSCSI
+* **Hyper-V** for virtualization
+* **Windows Server** for cluster nodes
+* **Active Directory** for domain integration
+* **iSCSI** for shared storage
+* **Jenkins CI/CD** to execute provisioning and installation scripts
+* **Terraform** to provision infrastructure
 
 ---
 
-## Step-by-Step Setup
+## 🔧 Prerequisites
 
-### 1. Prepare Hyper-V Environment
+* Windows Server with Hyper-V role enabled
+* Jenkins installed (with Git and Pipeline plugins)
+* Domain Controller already deployed
+* SQL Server 2022 ISO downloaded to each node at `C:\SQL2022`
 
-* Installed Hyper-V on the host machine
-* Used Terraform to provision VMs:
+---
 
-  * Domain Controller (Node1)
-  * Node2 (SQL FCI Primary)
-  * Node3 (SQL FCI Secondary)
+## 🌐 Network & Domain Setup
 
-### 2. Active Directory Setup
+1. Create a **virtual switch** in Hyper-V for private network communication.
+2. Provision three VMs:
 
-* Promoted Node1 to Domain Controller (`lab.local`)
-* Added Node2 and Node3 to the domain
+   * **DC01**: Domain Controller (`lab.local`)
+   * **Node1**: Cluster node 1
+   * **Node2**: Cluster node 2
+3. Join both Node1 and Node2 to the domain.
 
-### 3. iSCSI Target Configuration
+**Screenshot:**
+![Cluster Nodes](images/cluster-nodes.png)
 
-* Created virtual disk `iscsi-server.vhdx`
-* Configured iSCSI target on host and allowed Node2 & Node3 as initiators
+---
 
-**Screenshot Reference:**
+## 🧱 iSCSI Shared Storage Setup
 
-* `iscsi-node01-connected.png`
-* `iscsi-node02-connected.png`
+1. Use `iscsicpl.exe` to configure iSCSI Initiator on both nodes.
+2. Connect to the target exposed from the host using Microsoft iSCSI Target.
+3. Format and mount the shared disk.
 
-### 4. Failover Cluster Installation
+**Screenshots:**
 
-* Installed Failover Clustering role on Node2 & Node3
-* Validated cluster using wizard
+* Node1 connected: ![iSCSI Node1](images/iscsi-node01-connected.png)
+* Node2 connected: ![iSCSI Node2](images/iscsi-node02-connected.png)
 
-**Screenshot Reference:**
+---
 
-* `fci-validation-results.png`
-* `add-cluster.png`
-* `cluster-nodes.png`
-* `cluster-summary.png`
+## 🏗️ Failover Cluster Setup
 
-### 5. Shared Disk Setup
+1. Install the **Failover Clustering** feature.
+2. Run the **Cluster Validation Wizard**.
+3. Create the cluster with a virtual IP.
+4. Add shared disk as a cluster resource.
 
-* Initialized the shared disk in Disk Management (Node01)
-* Added disk to cluster via Failover Cluster Manager
+**Screenshots:**
 
-**Screenshot Reference:**
+* Validation results: ![Validation](images/fci-validation-results.png)
+* Add disk: ![Cluster Disk](images/add-cluster.png)
+* Cluster disk added: ![Disk Added](images/disk-manaement-node01.png)
+* Cluster summary: ![Cluster Summary](images/cluster-summary.png)
 
-* `disk-manaement-node01.png`
-* `Clusterdisk ON NODE01 ONLY.png`
-* `Add clusterdisk ON FAILOVERCLUSTER.png`
+---
 
-### 6. Skip AD Checks (If any domain/validation warnings)
+## ⚙️ SQL Server FCI Installation
 
-**Screenshot Reference:**
-
-* `skip-ad-validation.png`
-
-### 7. SQL Server 2022 Installation - Node1
-
-* Mounted SQL ISO: `SQLServer2022-x64-ENU-Dev.iso`
-* Launched setup using a PowerShell script:
+1. Mount SQL Server ISO to each node.
+2. Prepare configuration file `SQLFCI.ini`.
+3. Run `install_fci.ps1` on Node1:
 
 ```powershell
 Start-Process -FilePath "C:\SQL2022\setup\setup.exe" -ArgumentList "/ConfigurationFile=C:\Scripts\SQLFCI.ini" -Wait
 ```
 
-**Screenshot Reference:**
+4. Run `add_node.ps1` on Node2:
 
-* `sql-fci-install-node01.png`
-* `sql fci node01.png`
-* `installin fci.png`
-
-### 8. Jenkins Pipeline
-
-* Jenkins runs on a Windows VM
-* We used Plink (`plink.exe`) for SSH remote execution and `pscp.exe` for file transfer (but this was later skipped in favor of manual copy)
-* Jenkinsfile uses `bat` steps to invoke PowerShell over SSH:
-
-```groovy
-bat "plink.exe -pw %SSH_PASS% administrator@NODE3_IP powershell -ExecutionPolicy Bypass -File C:\Scripts\install_fci.ps1"
+```powershell
+Start-Process -FilePath "C:\SQL2022\setup\setup.exe" -ArgumentList "/ConfigurationFile=C:\Scripts\SQLAddNode.ini" -Wait
 ```
 
-**Jenkins Stages:**
-
-* Run SQL install script on Node3
-* Add Node2 to SQL cluster using `add_node.ps1`
+**Screenshot:**
+![SQL Install](images/sql-fci-install-node01.png)
 
 ---
 
-## Remaining Screenshots You Uploaded:
+## 🧪 Validation
 
-* `2 Nodes no issues noerrors.png` → Cluster healthy status
-* `2 nODES up and running till now.png` → Confirmation of active nodes
-* `node2 connected.png` / `nod1 Asci connected.png` → iSCSI confirmation
-
-We will embed these with captions and appropriate stages if you confirm final names and ordering.
+* SQL Server Role in Failover Cluster Manager
+* Shared storage active
+* Manual failover test
 
 ---
 
-## Final Note
+## 🚀 CI/CD Pipeline
 
-* Ensure all scripts are copied to `C:\Scripts` on each node
-* Verify SQL shared disk is online and owned by Node1 before starting installation
-* Use Jenkins only to run scripts (no file copying now)
+The Jenkins pipeline performs the following:
 
-Let me know when you’re ready to embed Jenkins stage screenshots or if anything should be renamed/added.
+1. Clones the repo
+2. SSHs into Node3 (new name for Node1 replacement)
+3. Executes `install_fci.ps1`
+4. SSHs into Node2 and executes `add_node.ps1`
+
+Ensure `plink.exe` and `pscp.exe` are in `C:\Windows\System32`.
+
+---
+
+## 🗂️ File Structure
+
+```
+├── Jenkinsfile
+├── sql-install
+│   ├── add_node.ps1
+│   ├── install_fci.ps1
+│   ├── SQLAddNode.ini
+│   └── SQLFCI.ini
+├── images
+│   ├── cluster-nodes.png
+│   ├── iscsi-node01-connected.png
+│   └── ...
+└── README.md
+```
+
+---
+
+## ✅ Summary
+
+You’ve set up a fully functional SQL Server Failover Cluster with:
+
+* Domain-integrated nodes
+* Shared storage via iSCSI
+* Highly Available SQL Server Instance
+* CI/CD automation for cluster deployment
+
+---
+
+Let me know if you want a PDF version or a version with embedded Jenkins pipeline screenshots.
